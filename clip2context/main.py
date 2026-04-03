@@ -61,12 +61,11 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
     segment_count = 0
     transcript_elapsed = 0.0
 
-    # ── Step 1: Extract frames ────────────────────────────────────────────────
     if do_frames:
         try:
-            from extract_frames import extract_frames
+            from clip2context.extract_frames import extract_frames
         except ImportError:
-            raise ImportError("extract_frames.py not found. Make sure it is in the same directory.")
+            raise ImportError("extract_frames module not found. Make sure clip2context is installed.")
 
         step = "1/2" if do_transcript else "1/1"
         print(f"[{step}] Extracting frames from: {video_path.name}")
@@ -75,7 +74,7 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
             _, frame_count = extract_frames(video_path, frames_dir, fps, quality)
         except (FileNotFoundError, RuntimeError):
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise RuntimeError(f"Unexpected error during frame extraction: {exc}") from exc
         frames_elapsed = time.perf_counter() - t0
         print(f"    Done — {frame_count} frames in {frames_elapsed:.1f}s")
@@ -83,9 +82,9 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
     # ── Step 2: Extract transcript ────────────────────────────────────────────
     if do_transcript:
         try:
-            from extract_transcript import extract_transcript
+            from clip2context.extract_transcript import extract_transcript
         except ImportError:
-            raise ImportError("extract_transcript.py not found. Make sure it is in the same directory.")
+            raise ImportError("extract_transcript module not found. Make sure clip2context is installed.")
 
         step = "2/2" if do_frames else "1/1"
         print(f"[{step}] Transcribing audio from: {video_path.name}")
@@ -135,7 +134,7 @@ def _resolve_video_paths(inputs: list[str]) -> list[Path]:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Extract frames and transcript from one or more video files. "
+            "Extract frames and transcript from one or more video files."
             "Output is saved in a directory named after each video."
         )
     )

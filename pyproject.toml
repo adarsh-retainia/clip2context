@@ -1,9 +1,33 @@
 [project]
 name = "clip2context"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.1"
+description = "Extract frames and transcripts from video files for LLM context and multimodal pipelines."
 readme = "README.md"
 requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "Adarsh Senghani", email = "adarsh@retainia.com" }
+]
+keywords = ["video", "frames", "transcript", "whisper", "llm", "ffmpeg"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
 dependencies = [
   "openai-whisper>=20250625",
 ]
+
+[project.urls]
+Homepage = "https://github.com/adarsh-retainia/clip2context"
+Repository = "https://github.com/adarsh-retainia/clip2context"
+
+[project.scripts]
+clip2context = "clip2context.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["clip2context"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
