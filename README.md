@@ -11,7 +11,6 @@ Given one or more video files, `clip2context` produces:
 
 - Python 3.12+
 - [FFmpeg](https://ffmpeg.org/download.html) (must be on `PATH`)
-- [openai-whisper](https://github.com/openai/whisper)
 
 Install FFmpeg via your package manager:
 
@@ -42,10 +41,8 @@ uv sync
 
 ## Usage
 
-### Command line
-
 ```bash
-python main.py <video_path> [<video_path> ...] [options]
+clip2context <video_path> [<video_path> ...] [options]
 ```
 
 **Arguments**
@@ -63,22 +60,27 @@ python main.py <video_path> [<video_path> ...] [options]
 
 ```bash
 # Process a single video with defaults (1 fps, quality 95)
-python main.py interview.mp4
+clip2context interview.mp4
 
 # Process all videos in a folder, 1 frame every 2 seconds
-python main.py ./recordings/ --fps 0.5
+clip2context ./recordings/ --fps 0.5
 
 # Transcripts only, custom output directory
-python main.py lecture.mp4 --only-transcripts --output-dir ./results
+clip2context lecture.mp4 --only-transcripts --output-dir ./results
 
 # Frames only, lower quality for smaller file sizes
-python main.py demo.mov --only-frames --fps 2 --quality 75
+clip2context demo.mov --only-frames --fps 2 --quality 75
+
+# Process multiple videos at once
+clip2context video1.mp4 video2.mp4 video3.mp4
 ```
 
 ### Python API
 
+You can also use `clip2context` programmatically:
+
 ```python
-from main import run
+from clip2context.main import run
 
 # Full extraction (frames + transcript)
 run("interview.mp4")
@@ -94,11 +96,11 @@ run(
 )
 ```
 
-You can also use the individual extractors directly:
+Or use the individual extractors directly:
 
 ```python
-from extract_frames import extract_frames
-from extract_transcript import extract_transcript
+from clip2context.extract_frames import extract_frames
+from clip2context.extract_transcript import extract_transcript
 
 # Extract frames → returns (output_dir, frame_count)
 output_dir, count = extract_frames("video.mp4", "output/frames", fps=1.0, quality=95)
