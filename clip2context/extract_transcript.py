@@ -27,9 +27,9 @@ def _seconds_to_hms(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def extract_transcript(video_path: str | Path, output_dir: str | Path) -> Path:
+def extract_transcript(video_path: str | Path, output_dir: str | Path, model_name: str = "medium") -> Path:
     """
-    Transcribe *video_path* using Whisper (medium model, English only).
+    Transcribe *video_path* using Whisper (English only).
 
     Saves:
       - transcript_raw.txt          — plain text
@@ -55,13 +55,12 @@ def extract_transcript(video_path: str | Path, output_dir: str | Path) -> Path:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Loading Whisper model (medium)…")
-    model = whisper.load_model("medium")
+    print(f"Loading Whisper model ({model_name})…")
+    model = whisper.load_model(model_name)
 
     print(f"Transcribing {video_path.name}…")
     result = model.transcribe(
         str(video_path),
-        language="en",
         verbose=False,
         word_timestamps=True,
     )
@@ -127,6 +126,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default="output",
         help="Base directory for output (default: output/). Each video gets its own subdirectory named after the video stem.",
     )
+    parser.add_argument(
+        "--model",
+        default="medium",
+        help="Whisper model to use (default: medium). Options: tiny, base, small, medium, large, turbo.",
+    )
     return parser
 
 
@@ -144,7 +148,7 @@ def main() -> None:
         p = Path(video_path)
         out = Path(args.output_dir) / p.stem / "transcript"
         try:
-            output_dir = extract_transcript(p, out)
+            output_dir = extract_transcript(p, out, args.model)
             print(f"Transcript saved to: {output_dir}")
             print(f"  - {output_dir / 'transcript_raw.txt'}")
             print(f"  - {output_dir / 'transcript_timestamped.json'}")

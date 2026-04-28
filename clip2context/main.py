@@ -43,7 +43,7 @@ def _print_summary(
     print("=" * 50)
 
 
-def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: float = 1.0, quality: int = 95, do_frames: bool = True, do_transcript: bool = True) -> None:
+def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: float = 1.0, quality: int = 95, do_frames: bool = True, do_transcript: bool = True, model_name: str = "medium") -> None:
     video_path = Path(video_path)
 
     if not video_path.exists():
@@ -90,7 +90,7 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
         print(f"[{step}] Transcribing audio from: {video_path.name}")
         t1 = time.perf_counter()
         try:
-            extract_transcript(video_path, transcript_dir)
+            extract_transcript(video_path, transcript_dir, model_name)
         except (FileNotFoundError, RuntimeError):
             raise
         except Exception as exc:  # noqa: BLE001
@@ -172,6 +172,11 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="1-100",
         help="WebP compression quality (default: 95). Lower values produce smaller files with some quality loss.",
     )
+    parser.add_argument(
+        "--model",
+        default="medium",
+        help="Whisper model to use (default: medium). Options: tiny, base, small, medium, large, turbo.",
+    )
     return parser
 
 
@@ -193,7 +198,7 @@ def main() -> None:
         if len(video_paths) > 1:
             print(f"\n[Video {i}/{len(video_paths)}] {video_path}")
         try:
-            run(video_path, output_base, fps=args.fps, quality=args.quality, do_frames=do_frames, do_transcript=do_transcript)
+            run(video_path, output_base, fps=args.fps, quality=args.quality, do_frames=do_frames, do_transcript=do_transcript, model_name=args.model)
         except Exception as exc:  # noqa: BLE001
             print(f"Error: {exc}", file=sys.stderr)
             failed.append(str(video_path))

@@ -86,8 +86,8 @@ wheels = [
 
 [[package]]
 name = "clip2context"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.1.2"
+source = { editable = "." }
 dependencies = [
     { name = "openai-whisper" },
 ]
