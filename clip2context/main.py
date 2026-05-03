@@ -21,6 +21,8 @@ import sys
 import time
 from pathlib import Path
 
+from clip2context.utils import parse_time
+
 
 def _print_summary(
     output_dir: Path,
@@ -43,7 +45,7 @@ def _print_summary(
     print("=" * 50)
 
 
-def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: float = 1.0, quality: int = 95, do_frames: bool = True, do_transcript: bool = True, model_name: str = "medium") -> None:
+def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: float = 1.0, quality: int = 95, do_frames: bool = True, do_transcript: bool = True, model_name: str = "medium", start_time: float | None = None, end_time: float | None = None) -> None:
     video_path = Path(video_path)
 
     if not video_path.exists():
@@ -71,7 +73,7 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
         print(f"[{step}] Extracting frames from: {video_path.name}")
         t0 = time.perf_counter()
         try:
-            _, frame_count = extract_frames(video_path, frames_dir, fps, quality)
+            _, frame_count = extract_frames(video_path, frames_dir, fps, quality, start_time, end_time)
         except (FileNotFoundError, RuntimeError):
             raise
         except Exception as exc:
@@ -90,7 +92,7 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
         print(f"[{step}] Transcribing audio from: {video_path.name}")
         t1 = time.perf_counter()
         try:
-            extract_transcript(video_path, transcript_dir, model_name)
+            extract_transcript(video_path, transcript_dir, model_name, start_time, end_time)
         except (FileNotFoundError, RuntimeError):
             raise
         except Exception as exc:  # noqa: BLE001
@@ -177,6 +179,18 @@ def _build_parser() -> argparse.ArgumentParser:
         default="medium",
         help="Whisper model to use (default: medium). Options: tiny, base, small, medium, large, turbo.",
     )
+    parser.add_argument(
+        "--start-time",
+        type=parse_time,
+        default=None,
+        help="Start time (format: SS, MM:SS, or HH:MM:SS). Process only from this point onward.",
+    )
+    parser.add_argument(
+        "--end-time",
+        type=parse_time,
+        default=None,
+        help="End time (format: SS, MM:SS, or HH:MM:SS). Process only up to this point.",
+    )
     return parser
 
 
@@ -198,7 +212,7 @@ def main() -> None:
         if len(video_paths) > 1:
             print(f"\n[Video {i}/{len(video_paths)}] {video_path}")
         try:
-            run(video_path, output_base, fps=args.fps, quality=args.quality, do_frames=do_frames, do_transcript=do_transcript, model_name=args.model)
+            run(video_path, output_base, fps=args.fps, quality=args.quality, do_frames=do_frames, do_transcript=do_transcript, model_name=args.model, start_time=args.start_time, end_time=args.end_time)
         except Exception as exc:  # noqa: BLE001
             print(f"Error: {exc}", file=sys.stderr)
             failed.append(str(video_path))

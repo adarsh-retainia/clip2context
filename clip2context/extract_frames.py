@@ -19,6 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from clip2context.utils import parse_time
+
 
 def _seconds_to_hms(seconds: float) -> str:
     h = int(seconds // 3600)
@@ -44,12 +46,13 @@ def _get_video_duration(video_path: Path) -> float:
     return float(result.stdout.strip())
 
 
-def extract_frames(video_path: str | Path, output_dir: str | Path, fps: float = 1.0, quality: int = 95) -> tuple[Path, int]:
+def extract_frames(video_path: str | Path, output_dir: str | Path, fps: float = 1.0, quality: int = 95, start_time: float | None = None, end_time: float | None = None) -> tuple[Path, int]:
     """
     Extract frames from *video_path* into *output_dir* at the given *fps* rate.
     Frames keep original resolution and are compressed as high-quality WebP.
 
     *quality* controls WebP compression (1–100; lower = smaller files).
+    *start_time* and *end_time* are in seconds; if provided, only extract frames in that range.
 
     Returns (output_dir_path, frame_count).
     Raises FileNotFoundError if the video does not exist.
@@ -72,24 +75,29 @@ def extract_frames(video_path: str | Path, output_dir: str | Path, fps: float = 
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Build ffmpeg command with optional time range
+    ffmpeg_cmd = ["ffmpeg", "-i", str(video_path)]
+    if start_time is not None:
+        ffmpeg_cmd.extend(["-ss", str(start_time)])
+    if end_time is not None:
+        duration = end_time - (start_time or 0)
+        ffmpeg_cmd.extend(["-t", str(duration)])
+
     # Keep source resolution for text/UI clarity and compress with high-quality
     # WebP so files are much smaller than PNG while staying visually sharp.
     frame_pattern = str(output_dir / "frame_%04d.webp")
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-i", str(video_path),
-            "-vf", f"fps={fps}",
-            "-c:v", "libwebp",
-            "-quality", str(quality),
-            "-compression_level", "6",
-            "-vsync", "vfr",
-            "-hide_banner",
-            "-loglevel", "error",
-            frame_pattern,
-        ],
-        check=True,
-    )
+    ffmpeg_cmd.extend([
+        "-vf", f"fps={fps}",
+        "-c:v", "libwebp",
+        "-quality", str(quality),
+        "-compression_level", "6",
+        "-vsync", "vfr",
+        "-hide_banner",
+        "-loglevel", "error",
+        frame_pattern,
+    ])
+    
+    subprocess.run(ffmpeg_cmd, check=True)
 
     # Collect generated frames and build manifest
     frames = sorted(output_dir.glob("frame_*.webp"))
@@ -98,7 +106,7 @@ def extract_frames(video_path: str | Path, output_dir: str | Path, fps: float = 
     interval = 1.0 / fps
     manifest = []
     for idx, frame_file in enumerate(frames):
-        timestamp_seconds = idx * interval
+        timestamp_seconds = idx * interval + (start_time or 0)
         manifest.append(
             {
                 "frame_filename": frame_file.name,
@@ -160,6 +168,18 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="1-100",
         help="WebP compression quality (default: 95). Lower values produce smaller files with some quality loss.",
     )
+    parser.add_argument(
+        "--start-time",
+        type=parse_time,
+        default=None,
+        help="Start time (format: SS, MM:SS, or HH:MM:SS). Extract frames only from this point onward.",
+    )
+    parser.add_argument(
+        "--end-time",
+        type=parse_time,
+        default=None,
+        help="End time (format: SS, MM:SS, or HH:MM:SS). Extract frames only up to this point.",
+    )
     return parser
 
 
@@ -177,7 +197,7 @@ def main() -> None:
         p = Path(video_path)
         out = Path(args.output_dir) / p.stem / "frames"
         try:
-            output_dir, frame_count = extract_frames(p, out, args.fps, args.quality)
+            output_dir, frame_count = extract_frames(p, out, args.fps, args.quality, args.start_time, args.end_time)
             print(f"Extracted {frame_count} frames to: {output_dir}")
             print(f"Manifest saved to: {output_dir / 'frames_manifest.json'}")
         except (FileNotFoundError, RuntimeError, subprocess.CalledProcessError) as exc:

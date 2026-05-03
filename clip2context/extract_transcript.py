@@ -18,6 +18,8 @@ import json
 import sys
 from pathlib import Path
 
+from clip2context.utils import parse_time
+
 
 def _seconds_to_hms(seconds: float) -> str:
     """Convert seconds to HH:MM:SS"""
@@ -27,9 +29,10 @@ def _seconds_to_hms(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def extract_transcript(video_path: str | Path, output_dir: str | Path, model_name: str = "medium") -> Path:
+def extract_transcript(video_path: str | Path, output_dir: str | Path, model_name: str = "medium", start_time: float | None = None, end_time: float | None = None) -> Path:
     """
     Transcribe *video_path* using Whisper (English only).
+    *start_time* and *end_time* are in seconds; if provided, only include segments in that range.
 
     Saves:
       - transcript_raw.txt          — plain text
@@ -65,7 +68,7 @@ def extract_transcript(video_path: str | Path, output_dir: str | Path, model_nam
         word_timestamps=True,
     )
 
-    # Plain text transcript
+    # Plain text transcript (unfiltered for now, will extract filtered text below)
     raw_text: str = result["text"].strip()
     raw_path = output_dir / "transcript_raw.txt"
     raw_path.write_text(raw_text, encoding="utf-8")
@@ -76,11 +79,19 @@ def extract_transcript(video_path: str | Path, output_dir: str | Path, model_nam
         words = seg.get("words", [])
         start = words[0]["start"] if words else seg["start"]
         end = words[-1]["end"] if words else seg["end"]
+        
+        # Check if segment overlaps with time range
+        if start_time is not None and end <= start_time:
+            continue
+        if end_time is not None and start >= end_time:
+            continue
+        
         segments.append({
             "start": round(start, 3),
             "end": round(end, 3),
             "text": seg["text"].strip(),
         })
+    
     timestamped_path = output_dir / "transcript_timestamped.json"
     timestamped_path.write_text(json.dumps(segments, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -131,6 +142,18 @@ def _build_parser() -> argparse.ArgumentParser:
         default="medium",
         help="Whisper model to use (default: medium). Options: tiny, base, small, medium, large, turbo.",
     )
+    parser.add_argument(
+        "--start-time",
+        type=parse_time,
+        default=None,
+        help="Start time (format: SS, MM:SS, or HH:MM:SS). Transcribe only from this point onward.",
+    )
+    parser.add_argument(
+        "--end-time",
+        type=parse_time,
+        default=None,
+        help="End time (format: SS, MM:SS, or HH:MM:SS). Transcribe only up to this point.",
+    )
     return parser
 
 
@@ -148,7 +171,7 @@ def main() -> None:
         p = Path(video_path)
         out = Path(args.output_dir) / p.stem / "transcript"
         try:
-            output_dir = extract_transcript(p, out, args.model)
+            output_dir = extract_transcript(p, out, args.model, args.start_time, args.end_time)
             print(f"Transcript saved to: {output_dir}")
             print(f"  - {output_dir / 'transcript_raw.txt'}")
             print(f"  - {output_dir / 'transcript_timestamped.json'}")
