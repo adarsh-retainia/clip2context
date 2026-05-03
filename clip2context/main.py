@@ -71,6 +71,12 @@ def run(video_path: str | Path, output_base: Path = Path("output"), *, fps: floa
 
         step = "1/2" if do_transcript else "1/1"
         print(f"[{step}] Extracting frames from: {video_path.name}")
+        
+        # Log seconds per frame only when fps < 1
+        if fps < 1.0:
+            seconds_per_frame = 1.0 / fps
+            print(f"    Frame rate: 1 frame every {seconds_per_frame:.1f}s")
+        
         t0 = time.perf_counter()
         try:
             _, frame_count = extract_frames(video_path, frames_dir, fps, quality, start_time, end_time)

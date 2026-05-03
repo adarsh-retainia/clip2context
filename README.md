@@ -53,6 +53,8 @@ clip2context <video_path> [<video_path> ...] [options]
 | `--output-dir DIR` | Base directory for all output (default: `output/`). |
 | `--fps FLOAT` | Frames per second to extract (default: `1.0`). Use `0.5` for one frame every two seconds. |
 | `--quality 1-100` | WebP compression quality (default: `95`). Lower = smaller files. |
+| `--start-time TIME` | Start time (format: `SS`, `MM:SS`, or `HH:MM:SS`). Process from this point onward. |
+| `--end-time TIME` | End time (format: `SS`, `MM:SS`, or `HH:MM:SS`). Process up to this point. |
 | `--only-frames` | Extract frames only; skip transcription. |
 | `--only-transcripts` | Extract transcripts only; skip frame extraction. |
 
@@ -73,6 +75,15 @@ clip2context demo.mov --only-frames --fps 2 --quality 75
 
 # Process multiple videos at once
 clip2context video1.mp4 video2.mp4 video3.mp4
+
+# Extract only from 5 minutes to 10 minutes (MM:SS format)
+clip2context long-video.mp4 --start-time 05:00 --end-time 10:00
+
+# Extract first 30 seconds
+clip2context video.mp4 --end-time 30
+
+# Skip first minute, extract frames and transcript for the rest (HH:MM:SS format)
+clip2context video.mp4 --start-time 1:00:00
 ```
 
 ### Python API
@@ -93,6 +104,13 @@ run(
     quality=80,
     do_frames=True,
     do_transcript=True,
+)
+
+# Extract only a specific time range (in seconds)
+run(
+    "long-video.mp4",
+    start_time=300,  # Start at 5 minutes
+    end_time=600,    # End at 10 minutes
 )
 ```
 
